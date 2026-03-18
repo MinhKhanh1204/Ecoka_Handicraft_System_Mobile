@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/utils/shared_prefs.dart';
 import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 
 part 'auth_provider.g.dart';
 
@@ -45,6 +46,21 @@ class Auth extends _$Auth {
       final res = await ref.read(authServiceProvider).login(username, password);
       await SharedPrefs.saveToken(res.accessToken);
       await SharedPrefs.setLoggedIn(true);
+      
+      try {
+        final profileService = ProfileService();
+        final profile = await profileService.getProfile();
+        await SharedPrefs.saveUserId(profile.accountId);
+        await SharedPrefs.saveUserName(profile.username);
+        await SharedPrefs.saveUserEmail(profile.email);
+        if (profile.fullName != null) {
+          await SharedPrefs.saveUserFullName(profile.fullName!);
+        }
+        if (profile.avatar != null) {
+          await SharedPrefs.saveUserAvatar(profile.avatar);
+        }
+      } catch (_) {}
+
       state = state.copyWith(isLoading: false, isLoggedIn: true);
       return true;
     } catch (e) {
