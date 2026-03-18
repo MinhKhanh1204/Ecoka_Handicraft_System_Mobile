@@ -23,7 +23,7 @@ final productServiceProvider = AutoDisposeProvider<ProductService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ProductServiceRef = AutoDisposeProviderRef<ProductService>;
-String _$productControllerHash() => r'208a42d6bbca9c1b55a4528398ac78673a60a7e2';
+String _$productControllerHash() => r'ed91bad6237f41c492a59aaab050a3b01f70e3e2';
 
 /// See also [ProductController].
 @ProviderFor(ProductController)

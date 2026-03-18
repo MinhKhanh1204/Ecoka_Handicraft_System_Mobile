@@ -19,13 +19,16 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final notifier = ref.read(productControllerProvider.notifier);
+      final currentState = ref.read(productControllerProvider);
+
+      if (currentState.allProducts.isEmpty) {
+        await notifier.loadProducts();
+      }
+
       if (widget.categoryId != null) {
-        ref
-            .read(productControllerProvider.notifier)
-            .loadProductsByCategory(widget.categoryId!);
-      } else {
-        ref.read(productControllerProvider.notifier).loadProducts();
+        notifier.filterByCategory(widget.categoryId!);
       }
     });
   }
@@ -57,7 +60,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                       if (widget.categoryId != null) {
                         ref
                             .read(productControllerProvider.notifier)
-                            .loadProductsByCategory(widget.categoryId!);
+                            .filterByCategory(widget.categoryId!);
                       } else {
                         ref.read(productControllerProvider.notifier).loadProducts();
                       }
@@ -86,12 +89,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
           return RefreshIndicator(
             onRefresh: () async {
+              final notifier = ref.read(productControllerProvider.notifier);
+              await notifier.loadProducts();
+
               if (widget.categoryId != null) {
-                await ref
-                    .read(productControllerProvider.notifier)
-                    .loadProductsByCategory(widget.categoryId!);
-              } else {
-                await ref.read(productControllerProvider.notifier).loadProducts();
+                notifier.filterByCategory(widget.categoryId!);
               }
             },
             child: GridView.builder(

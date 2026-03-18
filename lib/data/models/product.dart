@@ -3,6 +3,7 @@ import '../../core/constants/api_constants.dart';
 class Product {
   final String productId;
   final String productName;
+  final int? categoryId;
   final String? categoryName;
   final double originalPrice;
   final double finalPrice;
@@ -12,13 +13,13 @@ class Product {
   final double? discount;
   final int? stockQuantity;
   final String? status;
-  final int? categoryId;
   final List<String>? images;
   final Category? category;
 
   Product({
     required this.productId,
     required this.productName,
+    this.categoryId,
     this.categoryName,
     required this.originalPrice,
     required this.finalPrice,
@@ -28,7 +29,6 @@ class Product {
     this.discount,
     this.stockQuantity,
     this.status,
-    this.categoryId,
     this.images,
     this.category,
   });
@@ -54,6 +54,9 @@ class Product {
     return Product(
       productId: (json['productID'] ?? json['productId'] ?? '').toString(),
       productName: (json['productName'] ?? '').toString(),
+      categoryId: json['categoryId'] == null
+          ? null
+          : int.tryParse(json['categoryId'].toString()),
       categoryName: json['categoryName']?.toString(),
       originalPrice: _parseDouble(json['originalPrice'] ?? json['price']),
       finalPrice: _parseDouble(json['finalPrice'] ?? json['price']),
@@ -61,9 +64,10 @@ class Product {
       description: json['description']?.toString(),
       material: json['material']?.toString(),
       discount: _parseDoubleNullable(json['discount']),
-      stockQuantity: json['stockQuantity'] is int ? json['stockQuantity'] as int : int.tryParse('${json['stockQuantity']}'),
+      stockQuantity: json['stockQuantity'] is int
+          ? json['stockQuantity'] as int
+          : int.tryParse('${json['stockQuantity']}'),
       status: json['status']?.toString(),
-      categoryId: json['categoryID'] ?? json['categoryId'],
       images: json['images'] != null ? List<String>.from(json['images']) : null,
       category: json['category'] != null
           ? Category.fromJson((json['category'] as Map).cast<String, dynamic>())
@@ -85,7 +89,7 @@ class Product {
     return null;
   }
 
-  bool get hasDiscount => discount != null && discount! > 0;
+  bool get hasDiscount => finalPrice < originalPrice;
   double get displayPrice => finalPrice;
   double get displayOriginalPrice => originalPrice;
 }
@@ -94,13 +98,27 @@ class Category {
   final int categoryId;
   final String categoryName;
 
-  Category({required this.categoryId, required this.categoryName});
+  Category({
+    required this.categoryId,
+    required this.categoryName,
+  });
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      categoryId: (json['categoryID'] ?? json['categoryId'] ?? 0) as int,
-      categoryName: (json['categoryName'] ?? '').toString(),
+      categoryId: int.tryParse(
+        (json['categoryId'] ??
+            json['categoryID'] ??
+            json['id'] ??
+            json['Id'] ??
+            0)
+            .toString(),
+      ) ??
+          0,
+      categoryName: (json['categoryName'] ??
+          json['name'] ??
+          json['category_title'] ??
+          '')
+          .toString(),
     );
   }
 }
-
