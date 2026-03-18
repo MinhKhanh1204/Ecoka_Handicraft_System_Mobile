@@ -6,11 +6,11 @@ import 'api_client.dart';
 class AuthService {
   final ApiClient _apiClient = ApiClient();
 
-  Future<LoginResponse> login(String username, String password) async {
+  Future<LoginResponse> login(String email, String password) async {
     final response = await _apiClient.post(
       ApiConstants.login,
       data: {
-        'username': username,
+        'email': email,
         'password': password,
       },
     );

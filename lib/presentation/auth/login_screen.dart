@@ -13,13 +13,13 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -28,7 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     final ok = await ref
         .read(authProvider.notifier)
-        .login(_usernameController.text.trim(), _passwordController.text);
+        .login(_emailController.text.trim(), _passwordController.text);
     if (!ok && mounted) {
       final err = ref.read(authProvider).error;
       if (err != null) {
@@ -89,7 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 48),
                 TextFormField(
-                  controller: _usernameController,
+                  controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: 'Tên đăng nhập',
                     prefixIcon: Icon(Icons.person_outline),

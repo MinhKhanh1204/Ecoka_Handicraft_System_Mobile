@@ -8,14 +8,25 @@ import 'orders/order_list_screen.dart';
 import 'profile/profile_screen.dart';
 
 class MainNavigator extends ConsumerStatefulWidget {
-  const MainNavigator({super.key});
+  final int initialIndex;
+
+  const MainNavigator({
+    super.key,
+    this.initialIndex = 0,
+  });
 
   @override
   ConsumerState<MainNavigator> createState() => _MainNavigatorState();
 }
 
 class _MainNavigatorState extends ConsumerState<MainNavigator> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   void _onLogout() {
     ref.read(authProvider.notifier).logout();

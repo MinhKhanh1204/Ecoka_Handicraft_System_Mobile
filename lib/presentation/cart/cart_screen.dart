@@ -7,6 +7,9 @@ import '../../data/providers/cart_provider.dart';
 import '../../data/providers/order_provider.dart';
 import '../../data/providers/voucher_provider.dart';
 
+import '../home/home_screen.dart';
+import '../main_navigator.dart';
+
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
 
@@ -159,7 +162,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           const SizedBox(height: 8),
           const Text('Hãy thêm sản phẩm vào giỏ hàng', style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 24),
-          ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Tiếp tục mua sắm')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MainNavigator(initialIndex: 0),
+                ),
+                    (route) => false,
+              );
+            },
+            child: const Text('Tiếp tục mua sắm'),
+          ),
         ],
       ),
     );
