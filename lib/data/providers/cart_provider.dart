@@ -75,6 +75,7 @@ class CartController extends _$CartController {
           (i) => {
             'productId': i.productId,
             'quantity': i.quantity,
+            'unitPrice': i.price,
           },
         )
         .toList();

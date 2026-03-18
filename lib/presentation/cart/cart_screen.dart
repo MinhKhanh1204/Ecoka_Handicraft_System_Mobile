@@ -32,6 +32,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final cartState = ref.watch(cartControllerProvider);
     final cartNotifier = ref.read(cartControllerProvider.notifier);
+    
+    // Giữ cho provider này sống trong suốt thời gian mở màn hình CartScreen
+    ref.watch(voucherControllerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -259,17 +262,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   void _showCheckoutDialog() {
-    ref.read(voucherControllerProvider.notifier).loadVouchers();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final voucherState = ref.watch(voucherControllerProvider);
-          final cartTotal = ref.read(cartControllerProvider).cart.totalAmount;
-          final discount = ref.read(voucherControllerProvider.notifier).calculateDiscount(cartTotal);
-          final finalTotal = cartTotal - discount;
+    ref.read(voucherControllerProvider.notifier).loadVouchers().then((_) {
+      if (!mounted) return;
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        builder: (context) => StatefulBuilder(
+          builder: (context, setModalState) {
+            final voucherState = ref.read(voucherControllerProvider);
+            final cartTotal = ref.read(cartControllerProvider).cart.totalAmount;
+            final discount = ref.read(voucherControllerProvider.notifier).calculateDiscount(cartTotal);
+            final finalTotal = cartTotal - discount;
 
           return SingleChildScrollView(
             child: Padding(
@@ -284,18 +288,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       decoration: const InputDecoration(labelText: 'Địa chỉ giao hàng *', prefixIcon: Icon(Icons.location_on_outlined)),
                       maxLines: 2),
                   const SizedBox(height: 16),
-                  const Text('Phương thức thanh toán', style: TextStyle(fontWeight: FontWeight.w600)),
-                  RadioListTile<String>(title: const Text('Tiền mặt (COD)'), value: 'Cash', groupValue: _selectedPaymentMethod,
-                      onChanged: (v) => setModalState(() => _selectedPaymentMethod = v!)),
-                  RadioListTile<String>(title: const Text('Chuyển khoản'), value: 'BankTransfer', groupValue: _selectedPaymentMethod,
-                      onChanged: (v) => setModalState(() => _selectedPaymentMethod = v!)),
-                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Mã Giảm Giá', style: TextStyle(fontWeight: FontWeight.w600)),
                       TextButton.icon(
-                        onPressed: () => _showVoucherSheet(voucherState.vouchers, cartTotal),
+                        onPressed: () {
+                          Navigator.pop(context); // Đóng popup checkout hiện tại
+                          _showVoucherSheet(ref.read(voucherControllerProvider).vouchers, cartTotal);
+                        },
                         icon: const Icon(Icons.local_offer_outlined, size: 18),
                         label: Text(voucherState.appliedVoucher != null ? voucherState.appliedVoucher!.code : 'Chọn voucher'),
                       ),
@@ -339,22 +340,61 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         },
       ),
     );
+    });
   }
 
   void _showVoucherSheet(List<Voucher> vouchers, double orderAmount) {
+    final codeController = TextEditingController();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (ctx, scrollController) => Column(
-          children: [
-            const Padding(padding: EdgeInsets.all(16), child: Text('Chọn voucher', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-            Expanded(
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          minChildSize: 0.4,
+          expand: false,
+          builder: (ctx, scrollController) => Column(
+            children: [
+              const Padding(padding: EdgeInsets.all(16), child: Text('Nhập hoặc chọn voucher', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: codeController,
+                        decoration: const InputDecoration(
+                          hintText: 'Nhập mã giảm giá...',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final code = codeController.text.trim();
+                        if (code.isNotEmpty) {
+                          final success = await ref.read(voucherControllerProvider.notifier).applyVoucher(code, orderAmount);
+                          if (success && ctx.mounted) {
+                            Navigator.pop(ctx);
+                          } else if (ctx.mounted) {
+                            final err = ref.read(voucherControllerProvider).error ?? 'Mã không hợp lệ';
+                            ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(err), backgroundColor: AppTheme.errorColor));
+                          }
+                        }
+                      },
+                      child: const Text('Áp dụng'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (vouchers.isNotEmpty)
+                Expanded(
               child: ListView.builder(
                 controller: scrollController,
                 itemCount: vouchers.length,
@@ -382,9 +422,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ),
                   );
                 },
-              ),
-            ),
-          ],
+              )
+                )else
+              const Expanded(child: Center(child: Text('Không có voucher nào khả dụng để chọn.\nBạn có thể nhập mã thủ công ở trên.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))),
+            ],
+          ),
         ),
       ),
     );
@@ -415,7 +457,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     if (success && mounted) {
       await cartNotifier.clearCart();
       ref.read(voucherControllerProvider.notifier).removeAppliedVoucher();
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context); // Đóng bottom sheet
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
