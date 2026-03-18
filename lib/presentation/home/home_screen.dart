@@ -5,7 +5,6 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/product.dart';
 import '../../data/providers/product_provider.dart';
 import '../products/product_detail_screen.dart';
-import '../products/product_list_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -21,8 +20,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await ref.read(productControllerProvider.notifier).loadProducts();
-      await ref.read(productControllerProvider.notifier).loadCategories();
+      final notifier = ref.read(productControllerProvider.notifier);
+      await notifier.loadProducts();
+      await notifier.loadCategories();
     });
   }
 
@@ -38,8 +38,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            await ref.read(productControllerProvider.notifier).loadProducts();
-            await ref.read(productControllerProvider.notifier).loadCategories();
+            final notifier = ref.read(productControllerProvider.notifier);
+            await notifier.loadProducts();
+            await notifier.loadCategories();
           },
           child: CustomScrollView(
             slivers: [
@@ -72,20 +73,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   _searchController.clear();
                                   ref
                                       .read(productControllerProvider.notifier)
-                                      .loadProducts();
+                                      .searchProductsLocal('');
                                   setState(() {});
                                 },
                               )
                             : null,
                       ),
-                      onSubmitted: (value) {
-                        if (value.trim().isNotEmpty) {
-                          ref
-                              .read(productControllerProvider.notifier)
-                              .searchProducts(value.trim());
-                        }
+                      onChanged: (value) {
+                        ref
+                            .read(productControllerProvider.notifier)
+                            .searchProductsLocal(value.trim());
+                        setState(() {});
                       },
-                      onChanged: (_) => setState(() {}),
                     ),
                   ),
                 ),
@@ -109,8 +108,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildCategoriesSection() {
-    final categories = ref.watch(productControllerProvider).categories;
-    if (categories.isEmpty) return const SizedBox.shrink();
+    final productState = ref.watch(productControllerProvider);
+    final categories = productState.categories;
+
+    if (categories.isEmpty) {
+      return const SizedBox.square();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,72 +127,125 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         SizedBox(
           height: 100,
-          child: ListView.builder(
+          child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: categories.length,
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProductListScreen(
-                        categoryId: category.categoryId,
-                        categoryName: category.categoryName,
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 85,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: const Icon(
-                          Icons.category_outlined,
-                          color: AppTheme.primaryColor,
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        category.categoryName,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+            children: [
+              _buildAllCategoryItem(),
+              ...categories.map(_buildCategoryItem),
+            ],
           ),
         ),
       ],
     );
   }
 
+  Widget _buildAllCategoryItem() {
+    final productState = ref.watch(productControllerProvider);
+    final isSelected = productState.selectedCategoryId == null;
+
+    return GestureDetector(
+      onTap: () {
+        ref.read(productControllerProvider.notifier).filterByCategory(null);
+      },
+      child: Container(
+        width: 85,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.primaryColor
+                    : AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Icon(
+                Icons.apps,
+                color: isSelected ? Colors.white : AppTheme.primaryColor,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tất cả',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? AppTheme.primaryColor : Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryItem(Category category) {
+    final productState = ref.watch(productControllerProvider);
+    final isSelected = productState.selectedCategoryId == category.categoryId;
+
+    return GestureDetector(
+      onTap: () {
+        ref
+            .read(productControllerProvider.notifier)
+            .filterByCategory(category.categoryId);
+      },
+      child: SizedBox(
+        width: 95,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : AppTheme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  _getCategoryIcon(category.categoryName),
+                  color: isSelected ? Colors.white : AppTheme.primaryColor,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Text(
+                  category.categoryName,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: isSelected ? AppTheme.primaryColor : Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildProductsGrid() {
     final productState = ref.watch(productControllerProvider);
+
     if (productState.isLoading) {
       return const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
       );
     }
+
     if (productState.error != null) {
       return SliverFillRemaining(
         child: Center(
@@ -201,8 +257,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Text(productState.error!),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () =>
-                    ref.read(productControllerProvider.notifier).loadProducts(),
+                onPressed: () async {
+                  final notifier = ref.read(productControllerProvider.notifier);
+                  await notifier.loadProducts();
+                  await notifier.loadCategories();
+                },
                 child: const Text('Thử lại'),
               ),
             ],
@@ -210,6 +269,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
     }
+
     if (productState.products.isEmpty) {
       return const SliverFillRemaining(
         child: Center(child: Text('Không có sản phẩm nào')),
@@ -225,13 +285,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = productState.products[index];
-            return _buildProductCard(product);
-          },
-          childCount: productState.products.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final product = productState.products[index];
+          return _buildProductCard(product);
+        }, childCount: productState.products.length),
       ),
     );
   }
@@ -314,5 +371,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
-}
 
+  IconData _getCategoryIcon(String categoryName) {
+    final name = categoryName.toLowerCase().trim();
+
+    if (name.contains('bã mía')) {
+      return Icons.eco_outlined;
+    } else if (name.contains('lục bình')) {
+      return Icons.inventory_2_outlined;
+    } else if (name.contains('sợi chuối')) {
+      return Icons.shopping_bag_outlined;
+    } else if (name.contains('tre')) {
+      return Icons.park_outlined;
+    }
+
+    return Icons.category_outlined;
+  }
+}
