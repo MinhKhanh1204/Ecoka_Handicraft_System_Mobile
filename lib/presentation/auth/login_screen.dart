@@ -91,11 +91,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
-                    labelText: 'Tên đăng nhập',
-                    prefixIcon: Icon(Icons.person_outline),
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
-                  validator: (value) =>
-                      (value == null || value.isEmpty) ? 'Vui lòng nhập tên đăng nhập' : null,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Vui lòng nhập email';
+                    }
+                    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Email không hợp lệ';
+                    }
+                    return null;
+                  },
+                  keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 16),
@@ -115,7 +124,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _handleLogin(),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/forgot-password');
+                    },
+                    child: const Text('Quên mật khẩu?'),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: authState.isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
@@ -131,6 +150,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         )
                       : const Text('Đăng nhập', style: TextStyle(fontSize: 16)),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Chưa có tài khoản? '),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/register');
+                      },
+                      child: const Text('Đăng ký'),
+                    ),
+                  ],
                 ),
               ],
             ),

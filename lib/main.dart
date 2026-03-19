@@ -6,6 +6,11 @@ import 'core/utils/shared_prefs.dart';
 import 'data/providers/auth_provider.dart';
 import 'data/providers/theme_provider.dart';
 import 'presentation/auth/login_screen.dart';
+import 'presentation/auth/register_screen.dart';
+import 'presentation/auth/forgot_password_screen.dart';
+import 'presentation/auth/reset_password_screen.dart';
+import 'presentation/profile/change_password_screen.dart';
+import 'presentation/profile/edit_profile_screen.dart';
 import 'presentation/main_navigator.dart';
 import 'presentation/splash/splash_screen.dart';
 
@@ -28,6 +33,28 @@ class EcokaCustomerApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeState.themeMode,
+      initialRoute: '/',
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(builder: (_) => const MainEntry());
+          case '/register':
+            return MaterialPageRoute(builder: (_) => const RegisterScreen());
+          case '/forgot-password':
+            return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
+          case '/reset-password':
+            final email = settings.arguments as String?;
+            return MaterialPageRoute(
+              builder: (_) => ResetPasswordScreen(email: email ?? ''),
+            );
+          case '/change-password':
+            return MaterialPageRoute(builder: (_) => const ChangePasswordScreen());
+          case '/edit-profile':
+            return MaterialPageRoute(builder: (_) => const EditProfileScreen());
+          default:
+            return MaterialPageRoute(builder: (_) => const MainEntry());
+        }
+      },
       home: const MainEntry(),
     );
   }
