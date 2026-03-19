@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../core/debug/agent_debug_log.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/utils/shared_prefs.dart';
 
@@ -28,14 +29,20 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          final token = SharedPrefs.getToken();
-          if (token != null && token.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
+          // Một số endpoint công khai (vd: GET danh sách đánh giá) không cần token
+          final skipAuth = options.extra?['skipAuth'] == true;
+          if (!skipAuth) {
+            final token = SharedPrefs.getToken();
+            if (token != null && token.isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
           }
           return handler.next(options);
         },
         onError: (error, handler) async {
-          if (error.response?.statusCode == 401) {
+          // Chỉ logout khi 401 trên request có gửi token (tránh logout do endpoint công khai)
+          final skipAuth = error.requestOptions.extra?['skipAuth'] == true;
+          if (!skipAuth && error.response?.statusCode == 401) {
             await SharedPrefs.logout();
           }
           return handler.next(error);
@@ -50,14 +57,38 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
+    bool requireAuth = true,
   }) async {
+    final opts = options ?? Options();
+    opts.extra ??= {};
+    if (!requireAuth) opts.extra!['skipAuth'] = true;
     try {
       return await _dio.get(
         path,
         queryParameters: queryParameters,
-        options: options,
+        options: opts,
       );
     } catch (e) {
+      // #region agent log
+      if (e is DioException) {
+        final raw = e.response?.data?.toString() ?? '';
+        agentDebugLog(
+          'api_client.dart:get',
+          'dio_get_failed',
+          {
+            'path': path,
+            'requireAuth': requireAuth,
+            'skipAuth': opts.extra?['skipAuth'] == true,
+            'statusCode': e.response?.statusCode,
+            'method': e.requestOptions.method,
+            'fullUri': e.requestOptions.uri.toString(),
+            'dioType': e.type.name,
+            'bodySnippet': raw.length > 400 ? raw.substring(0, 400) : raw,
+          },
+          hypothesisId: 'H1',
+        );
+      }
+      // #endregion
       throw ApiException.fromDioError(e);
     }
   }
