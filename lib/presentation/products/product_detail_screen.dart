@@ -236,13 +236,21 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: feedbackState.error != null
+                  ? AppTheme.errorColor.withOpacity(0.08)
+                  : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'Chưa có đánh giá nào. Hãy là người đầu tiên!',
-                style: TextStyle(color: Colors.grey),
+                feedbackState.error ?? 'Chưa có đánh giá nào. Hãy là người đầu tiên!',
+                style: TextStyle(
+                  color: feedbackState.error != null
+                      ? AppTheme.errorColor
+                      : Colors.grey,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           )
@@ -331,7 +339,66 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             const SizedBox(height: 8),
             Text(feedback.comment!, style: const TextStyle(height: 1.4)),
           ],
+          if (feedback.imageUrls.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 72,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: feedback.imageUrls.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    onTap: () => _showFullImage(context, feedback.imageUrls[index]),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        feedback.imageUrls[index],
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 72,
+                          height: 72,
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  void _showFullImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Stack(
+          children: [
+            Image.network(
+              imageUrl,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Padding(
+                padding: EdgeInsets.all(24),
+                child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
+              ),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -396,7 +463,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   child: ElevatedButton(
                     onPressed: () async {
                       Navigator.pop(context);
-                      final success = await ref
+                      final errorMsg = await ref
                           .read(feedbackControllerProvider.notifier)
                           .addFeedback(
                             productId: widget.productId,
@@ -408,10 +475,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(success
-                                ? 'Cảm ơn bạn đã đánh giá!'
-                                : 'Gửi đánh giá thất bại'),
-                            backgroundColor: success
+                            content: Text(
+                              errorMsg == null
+                                  ? 'Cảm ơn bạn đã đánh giá!'
+                                  : errorMsg,
+                            ),
+                            backgroundColor: errorMsg == null
                                 ? AppTheme.successColor
                                 : AppTheme.errorColor,
                           ),
