@@ -23,20 +23,23 @@ class Voucher {
 
   factory Voucher.fromJson(Map<String, dynamic> json) {
     return Voucher(
-      voucherId: (json['voucherId'] ?? json['voucherID'] ?? 0) as int,
-      code: (json['code'] ?? '').toString(),
-      description: json['description']?.toString(),
-      discountPercent: _parseDouble(json['discountPercent'] ?? json['discount_percent']),
-      maxDiscount: _parseDoubleNullable(json['maxDiscount'] ?? json['max_discount']),
-      minOrderAmount: _parseDoubleNullable(json['minOrderAmount'] ?? json['min_order_amount']),
+      voucherId: (json['voucherId'] ?? json['VoucherId'] ?? json['voucherID'] ?? 0) as int,
+      code: (json['code'] ?? json['Code'] ?? '').toString(),
+      description: (json['description'] ?? json['Description'])?.toString(),
+      discountPercent: _parseDouble(json['discountPercent'] ?? json['DiscountPercent'] ?? json['discount_percent']),
+      maxDiscount: _parseDoubleNullable(json['maxDiscount'] ?? json['MaxReduction'] ?? json['maxReduction'] ?? json['max_discount']),
+      minOrderAmount: _parseDoubleNullable(json['minOrderAmount'] ?? json['MinOrderValue'] ?? json['minOrderValue'] ?? json['min_order_amount']),
       startDate: json['startDate'] != null
           ? DateTime.tryParse(json['startDate'].toString())
           : null,
-      endDate: json['endDate'] != null
-          ? DateTime.tryParse(json['endDate'].toString())
-          : null,
-      isActive: json['isActive'] == true || json['is_active'] == true,
+      endDate: _parseDateTime(json['endDate'] ?? json['ExpiryDate'] ?? json['expiryDate']),
+      isActive: json['isActive'] == true || json['IsActive'] == true || json['is_active'] == true,
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value.toString());
   }
 
   static double _parseDouble(dynamic value) {

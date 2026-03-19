@@ -268,82 +268,85 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         context: context,
         isScrollControlled: true,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        builder: (context) => StatefulBuilder(
-          builder: (context, setModalState) {
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (sheetContext, setModalState) {
             final voucherState = ref.read(voucherControllerProvider);
             final cartTotal = ref.read(cartControllerProvider).cart.totalAmount;
             final discount = ref.read(voucherControllerProvider.notifier).calculateDiscount(cartTotal);
             final finalTotal = cartTotal - discount;
 
-          return SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Thông tin đặt hàng', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  TextField(controller: _addressController,
-                      decoration: const InputDecoration(labelText: 'Địa chỉ giao hàng *', prefixIcon: Icon(Icons.location_on_outlined)),
-                      maxLines: 2),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Mã Giảm Giá', style: TextStyle(fontWeight: FontWeight.w600)),
-                      TextButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context); // Đóng popup checkout hiện tại
-                          _showVoucherSheet(ref.read(voucherControllerProvider).vouchers, cartTotal);
-                        },
-                        icon: const Icon(Icons.local_offer_outlined, size: 18),
-                        label: Text(voucherState.appliedVoucher != null ? voucherState.appliedVoucher!.code : 'Chọn voucher'),
-                      ),
-                    ],
-                  ),
-                  if (discount > 0) ...[
-                    const Divider(),
+            return SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom, left: 16, right: 16, top: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Thông tin đặt hàng', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    TextField(controller: _addressController,
+                        decoration: const InputDecoration(labelText: 'Địa chỉ giao hàng *', prefixIcon: Icon(Icons.location_on_outlined)),
+                        maxLines: 2),
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Giảm giá:', style: TextStyle(color: Colors.green)),
-                        Text('-${discount.toStringAsFixed(0)} ₫', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                        const Text('Mã Giảm Giá', style: TextStyle(fontWeight: FontWeight.w600)),
+                        TextButton.icon(
+                          onPressed: () {
+                            _showVoucherDialog(
+                              ref.read(voucherControllerProvider).vouchers,
+                              cartTotal,
+                              onVoucherApplied: () => setModalState(() {}),
+                            );
+                          },
+                          icon: const Icon(Icons.local_offer_outlined, size: 18),
+                          label: Text(voucherState.appliedVoucher != null ? voucherState.appliedVoucher!.code : 'Chọn voucher'),
+                        ),
                       ],
                     ),
-                  ],
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Tổng tiền:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      Text('${finalTotal.toStringAsFixed(0)} ₫',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                    if (discount > 0) ...[
+                      const Divider(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Giảm giá:', style: TextStyle(color: Colors.green)),
+                          Text('-${discount.toStringAsFixed(0)} ₫', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isProcessing ? null : () => _processOrder(voucherState.appliedVoucher?.voucherId),
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                      child: _isProcessing
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                          : const Text('Xác nhận đặt hàng', style: TextStyle(fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Tổng tiền:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        Text('${finalTotal.toStringAsFixed(0)} ₫',
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isProcessing ? null : () => _processOrder(voucherState.appliedVoucher?.voucherId),
+                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                        child: _isProcessing
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
+                            : const Text('Xác nhận đặt hàng', style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
-    );
+            );
+          },
+        ),
+      );
     });
   }
 
-  void _showVoucherSheet(List<Voucher> vouchers, double orderAmount) {
+  void _showVoucherDialog(List<Voucher> vouchers, double orderAmount, {required VoidCallback onVoucherApplied}) {
     final codeController = TextEditingController();
     showModalBottomSheet(
       context: context,
@@ -381,6 +384,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           final success = await ref.read(voucherControllerProvider.notifier).applyVoucher(code, orderAmount);
                           if (success && ctx.mounted) {
                             Navigator.pop(ctx);
+                            onVoucherApplied();
                           } else if (ctx.mounted) {
                             final err = ref.read(voucherControllerProvider).error ?? 'Mã không hợp lệ';
                             ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(err), backgroundColor: AppTheme.errorColor));
@@ -395,36 +399,38 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               const SizedBox(height: 16),
               if (vouchers.isNotEmpty)
                 Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                itemCount: vouchers.length,
-                itemBuilder: (ctx, index) {
-                  final voucher = vouchers[index];
-                  final canUse = voucher.isValid && (voucher.minOrderAmount == null || orderAmount >= voucher.minOrderAmount!);
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: canUse ? AppTheme.primaryColor : Colors.grey,
-                        child: Text('${voucher.discountPercent.toInt()}%', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      ),
-                      title: Text(voucher.code),
-                      subtitle: Text(voucher.description ?? 'Giảm ${voucher.discountPercent.toStringAsFixed(0)}%'),
-                      trailing: canUse
-                          ? TextButton(
-                              onPressed: () {
-                                ref.read(voucherControllerProvider.notifier).applyVoucher(voucher.code, orderAmount);
-                                Navigator.pop(ctx);
-                              },
-                              child: const Text('Áp dụng'),
-                            )
-                          : const Text('Không áp dụng', style: TextStyle(color: Colors.grey)),
-                    ),
-                  );
-                },
-              )
-                )else
-              const Expanded(child: Center(child: Text('Không có voucher nào khả dụng để chọn.\nBạn có thể nhập mã thủ công ở trên.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))),
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount: vouchers.length,
+                    itemBuilder: (ctx, index) {
+                      final voucher = vouchers[index];
+                      final canUse = voucher.isValid && (voucher.minOrderAmount == null || orderAmount >= voucher.minOrderAmount!);
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: canUse ? AppTheme.primaryColor : Colors.grey,
+                            child: Text('${voucher.discountPercent.toInt()}%', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                          ),
+                          title: Text(voucher.code),
+                          subtitle: Text(voucher.description ?? 'Giảm ${voucher.discountPercent.toStringAsFixed(0)}%'),
+                          trailing: canUse
+                              ? TextButton(
+                                  onPressed: () async {
+                                    await ref.read(voucherControllerProvider.notifier).applyVoucher(voucher.code, orderAmount);
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                    onVoucherApplied();
+                                  },
+                                  child: const Text('Áp dụng'),
+                                )
+                              : const Text('Không áp dụng', style: TextStyle(color: Colors.grey)),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              else
+                const Expanded(child: Center(child: Text('Không có voucher nào khả dụng để chọn.\nBạn có thể nhập mã thủ công ở trên.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))),
             ],
           ),
         ),

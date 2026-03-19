@@ -23,6 +23,9 @@ class ApiException implements Exception {
         message = error.message!;
       }
 
+      // Temporarily append more details for debugging
+      message = '$message [Status: $statusCode, Data: $data]';
+
       return ApiException(message, statusCode: statusCode);
     }
 

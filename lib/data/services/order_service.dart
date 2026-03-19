@@ -1,4 +1,5 @@
 import '../../core/constants/api_constants.dart';
+import '../../core/utils/shared_prefs.dart';
 import '../models/order.dart';
 import 'api_client.dart';
 
@@ -51,7 +52,7 @@ class OrderService {
         'orderItems': orderItems,
         'note': note ?? '',
         'voucherId': voucherId,
-        'customerID': 'dummy', // Bổ sung để qua mặt validation tạm thời
+        'customerID': SharedPrefs.getUserId() ?? '',
       },
     );
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../../core/constants/api_constants.dart';
@@ -66,12 +68,38 @@ class AuthService {
 
 class LoginResponse {
   final String accessToken;
+  final String? userId;
 
-  LoginResponse({required this.accessToken});
+  LoginResponse({required this.accessToken, this.userId});
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    final token = (json['accessToken'] ?? '').toString();
+    String? userId;
+
+    // Decode JWT to extract userId / customerId
+    try {
+      final parts = token.split('.');
+      if (parts.length == 3) {
+        // payload la phan thu 2 cua JWT
+        String payload = parts[1];
+        // Pad base64 string
+        switch (payload.length % 4) {
+          case 2: payload += '=='; break;
+          case 3: payload += '='; break;
+        }
+        final decoded = utf8.decode(base64Url.decode(payload));
+        final Map<String, dynamic> claims = jsonDecode(decoded);
+        // Thu tim cac claim pho bien chua userId
+        userId = (claims['CustomerID'] ?? claims['customerId'] ?? claims['customerID']
+            ?? claims['sub'] ?? claims['nameid'] ?? claims['UserId']
+            ?? claims['userId'] ?? claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'])
+            ?.toString();
+      }
+    } catch (_) {}
+
     return LoginResponse(
-      accessToken: (json['accessToken'] ?? '').toString(),
+      accessToken: token,
+      userId: userId,
     );
   }
 }

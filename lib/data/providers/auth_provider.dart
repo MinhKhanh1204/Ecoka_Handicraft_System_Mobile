@@ -44,6 +44,10 @@ class Auth extends _$Auth {
     try {
       final res = await ref.read(authServiceProvider).login(username, password);
       await SharedPrefs.saveToken(res.accessToken);
+      if (res.userId != null) {
+        await SharedPrefs.saveUserId(res.userId!);
+        print('--- [Auth] Login thành công, userId/customerId = ${res.userId} ---');
+      }
       await SharedPrefs.setLoggedIn(true);
       state = state.copyWith(isLoading: false, isLoggedIn: true);
       return true;
