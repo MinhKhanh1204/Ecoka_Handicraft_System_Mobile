@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../models/user.dart';
 import 'api_client.dart';
 
 class AuthService {
@@ -63,6 +64,136 @@ class AuthService {
       throw Exception(data['message'] ?? 'Đăng ký thất bại');
     }
     throw Exception('Đăng ký thất bại');
+  }
+
+  Future<User> getProfile() async {
+    final response = await _apiClient.get(ApiConstants.profile);
+
+    final data = response.data;
+    if (data is Map<String, dynamic> &&
+        ((data['success'] ?? data['succeeded']) == true)) {
+      return User.fromJson((data['data'] as Map).cast<String, dynamic>());
+    }
+    if (data is Map<String, dynamic>) {
+      throw Exception(data['message'] ?? 'Lấy thông tin hồ sơ thất bại');
+    }
+    throw Exception('Lấy thông tin hồ sơ thất bại');
+  }
+
+  Future<User> updateProfile({
+    String? fullName,
+    String? phone,
+    String? address,
+    DateTime? dateOfBirth,
+    String? gender,
+    String? avatarPath,
+  }) async {
+    final formData = FormData();
+
+    if (fullName != null && fullName.isNotEmpty) {
+      formData.fields.add(MapEntry('fullName', fullName));
+    }
+    if (phone != null && phone.isNotEmpty) {
+      formData.fields.add(MapEntry('phone', phone));
+    }
+    if (address != null && address.isNotEmpty) {
+      formData.fields.add(MapEntry('address', address));
+    }
+    if (dateOfBirth != null) {
+      formData.fields.add(MapEntry('dateOfBirth', dateOfBirth.toIso8601String()));
+    }
+    if (gender != null && gender.isNotEmpty) {
+      formData.fields.add(MapEntry('gender', gender));
+    }
+
+    if (avatarPath != null && avatarPath.isNotEmpty) {
+      formData.files.add(MapEntry(
+        'avatar',
+        await MultipartFile.fromFile(avatarPath),
+      ));
+    }
+
+    final response = await _apiClient.put(
+      ApiConstants.profile,
+      data: formData,
+    );
+
+    final data = response.data;
+    if (data is Map<String, dynamic> &&
+        ((data['success'] ?? data['succeeded']) == true)) {
+      return User.fromJson((data['data'] as Map).cast<String, dynamic>());
+    }
+    if (data is Map<String, dynamic>) {
+      throw Exception(data['message'] ?? 'Cập nhật hồ sơ thất bại');
+    }
+    throw Exception('Cập nhật hồ sơ thất bại');
+  }
+
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final response = await _apiClient.post(
+      ApiConstants.changePassword,
+      data: {
+        'oldPassword': oldPassword,
+        'newPassword': newPassword,
+        'confirmPassword': confirmPassword,
+      },
+    );
+
+    final data = response.data;
+    if (data is Map<String, dynamic> &&
+        ((data['success'] ?? data['succeeded']) == true)) {
+      return;
+    }
+    if (data is Map<String, dynamic>) {
+      throw Exception(data['message'] ?? 'Đổi mật khẩu thất bại');
+    }
+    throw Exception('Đổi mật khẩu thất bại');
+  }
+
+  Future<void> forgotPassword(String email) async {
+    final response = await _apiClient.post(
+      ApiConstants.forgotPassword,
+      data: {
+        'email': email,
+      },
+    );
+
+    final data = response.data;
+    if (data is Map<String, dynamic> &&
+        ((data['success'] ?? data['succeeded']) == true)) {
+      return;
+    }
+    if (data is Map<String, dynamic>) {
+      throw Exception(data['message'] ?? 'Gửi yêu cầu quên mật khẩu thất bại');
+    }
+    throw Exception('Gửi yêu cầu quên mật khẩu thất bại');
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    final response = await _apiClient.post(
+      ApiConstants.resetPassword,
+      data: {
+        'token': token,
+        'newPassword': newPassword,
+      },
+    );
+
+    final data = response.data;
+    if (data is Map<String, dynamic> &&
+        ((data['success'] ?? data['succeeded']) == true)) {
+      return;
+    }
+    if (data is Map<String, dynamic>) {
+      throw Exception(data['message'] ?? 'Đặt lại mật khẩu thất bại');
+    }
+    throw Exception('Đặt lại mật khẩu thất bại');
   }
 }
 
