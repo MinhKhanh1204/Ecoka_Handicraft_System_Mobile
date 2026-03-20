@@ -23,7 +23,7 @@ final authServiceProvider = AutoDisposeProvider<AuthService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthServiceRef = AutoDisposeProviderRef<AuthService>;
-String _$authHash() => r'edf4b7b2b8fef17f44e97fb16c24a7a8d2424900';
+String _$authHash() => r'03613ecbbcfce47b96c3bd13254d0ee928c1b7fd';
 
 /// See also [Auth].
 @ProviderFor(Auth)

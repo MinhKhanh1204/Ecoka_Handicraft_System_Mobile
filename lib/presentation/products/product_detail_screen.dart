@@ -8,6 +8,7 @@ import '../../data/models/feedback.dart' as app_feedback;
 import '../../data/providers/cart_provider.dart';
 import '../../data/providers/feedback_provider.dart';
 import '../../data/providers/product_provider.dart';
+import '../../core/utils/shared_prefs.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -21,13 +22,22 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   int _quantity = 1;
-
+  bool _showAllFeedbacks = false;
+  bool _isMyFeedback(app_feedback.Feedback feedback) {
+    final currentUserId = SharedPrefs.getUserId();
+    if (currentUserId == null || currentUserId.trim().isEmpty) return false;
+    return feedback.customerId?.trim() == currentUserId.trim();
+  }
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(productControllerProvider.notifier).loadProductDetail(widget.productId);
-      ref.read(feedbackControllerProvider.notifier).loadFeedbacks(widget.productId);
+      ref
+          .read(productControllerProvider.notifier)
+          .loadProductDetail(widget.productId);
+      ref
+          .read(feedbackControllerProvider.notifier)
+          .loadFeedbacks(widget.productId);
     });
   }
 
@@ -71,27 +81,27 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 flexibleSpace: FlexibleSpaceBar(
                   background: product.fullMainImageUrl.isNotEmpty
                       ? Image.network(
-                          product.fullMainImageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade200,
-                              child: const Icon(
-                                Icons.image_not_supported,
-                                size: 64,
-                                color: Colors.grey,
-                              ),
-                            );
-                          },
-                        )
-                      : Container(
-                          color: Colors.grey.shade200,
-                          child: const Icon(
-                            Icons.image,
-                            size: 64,
-                            color: Colors.grey,
-                          ),
+                    product.fullMainImageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey.shade200,
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          size: 64,
+                          color: Colors.grey,
                         ),
+                      );
+                    },
+                  )
+                      : Container(
+                    color: Colors.grey.shade200,
+                    child: const Icon(
+                      Icons.image,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
               ),
               SliverToBoxAdapter(
@@ -155,11 +165,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         children: [
                           Icon(
                             product.stockQuantity != null &&
-                                    product.stockQuantity! > 0
+                                product.stockQuantity! > 0
                                 ? Icons.check_circle
                                 : Icons.cancel,
                             color: product.stockQuantity != null &&
-                                    product.stockQuantity! > 0
+                                product.stockQuantity! > 0
                                 ? AppTheme.successColor
                                 : AppTheme.errorColor,
                             size: 20,
@@ -167,12 +177,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           const SizedBox(width: 8),
                           Text(
                             product.stockQuantity != null &&
-                                    product.stockQuantity! > 0
+                                product.stockQuantity! > 0
                                 ? 'Còn hàng (${product.stockQuantity})'
                                 : 'Hết hàng',
                             style: TextStyle(
                               color: product.stockQuantity != null &&
-                                      product.stockQuantity! > 0
+                                  product.stockQuantity! > 0
                                   ? AppTheme.successColor
                                   : AppTheme.errorColor,
                               fontWeight: FontWeight.w500,
@@ -209,6 +219,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   Widget _buildFeedbackSection(FeedbackState feedbackState) {
+    final displayedFeedbacks = _showAllFeedbacks
+        ? feedbackState.feedbacks
+        : feedbackState.feedbacks.take(5).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -243,7 +257,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
             child: Center(
               child: Text(
-                feedbackState.error ?? 'Chưa có đánh giá nào. Hãy là người đầu tiên!',
+                feedbackState.error ??
+                    'Chưa có đánh giá nào. Hãy là người đầu tiên!',
                 style: TextStyle(
                   color: feedbackState.error != null
                       ? AppTheme.errorColor
@@ -255,32 +270,52 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
           )
         else ...[
-          Row(
-            children: [
-              RatingBarIndicator(
-                rating: feedbackState.averageRating,
-                itemBuilder: (context, _) => const Icon(
-                  Icons.star,
-                  color: Colors.amber,
+            Row(
+              children: [
+                RatingBarIndicator(
+                  rating: feedbackState.averageRating,
+                  itemBuilder: (context, _) => const Icon(
+                    Icons.star,
+                    color: Colors.amber,
+                  ),
+                  itemCount: 5,
+                  itemSize: 20,
                 ),
-                itemCount: 5,
-                itemSize: 20,
+                const SizedBox(width: 8),
+                Text(
+                  '${feedbackState.averageRating.toStringAsFixed(1)} / 5 (${feedbackState.feedbacks.length} đánh giá)',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...displayedFeedbacks.map((f) => _buildFeedbackItem(f)),
+            if (feedbackState.feedbacks.length > 5)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _showAllFeedbacks = !_showAllFeedbacks;
+                    });
+                  },
+                  child: Text(_showAllFeedbacks ? 'Thu gọn' : 'Xem tất cả'),
+                ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                '${feedbackState.averageRating.toStringAsFixed(1)} / 5 (${feedbackState.feedbacks.length} đánh giá)',
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...feedbackState.feedbacks.take(5).map((f) => _buildFeedbackItem(f)),
-        ],
+          ],
       ],
     );
   }
 
   Widget _buildFeedbackItem(app_feedback.Feedback feedback) {
+    final displayName =
+    (feedback.username != null && feedback.username!.trim().isNotEmpty)
+        ? feedback.username!
+        : (feedback.customerId != null &&
+        feedback.customerId!.trim().isNotEmpty)
+        ? feedback.customerId!
+        : 'Người dùng';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -297,7 +332,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 radius: 16,
                 backgroundColor: AppTheme.primaryColor,
                 child: Text(
-                  (feedback.username ?? 'U')[0].toUpperCase(),
+                  displayName[0].toUpperCase(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -311,7 +346,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      feedback.username ?? 'Người dùng',
+                      displayName,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     Text(
@@ -349,7 +384,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   return GestureDetector(
-                    onTap: () => _showFullImage(context, feedback.imageUrls[index]),
+                    onTap: () =>
+                        _showFullImage(context, feedback.imageUrls[index]),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
@@ -361,13 +397,52 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           width: 72,
                           height: 72,
                           color: Colors.grey.shade200,
-                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                          child:
+                          const Icon(Icons.broken_image, color: Colors.grey),
                         ),
                       ),
                     ),
                   );
                 },
               ),
+            ),
+          ],
+          if (_isMyFeedback(feedback)) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _showEditFeedbackDialog(feedback),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Sửa'),
+                ),
+                TextButton.icon(
+                  onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(this.context);
+
+                    final errorMsg = await ref
+                        .read(feedbackControllerProvider.notifier)
+                        .deleteFeedback(
+                      feedbackId: feedback.feedbackId,
+                      productId: widget.productId,
+                    );
+
+                    if (!mounted) return;
+
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(errorMsg ?? 'Xóa đánh giá thành công'),
+                        backgroundColor: errorMsg == null
+                            ? AppTheme.successColor
+                            : AppTheme.errorColor,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  label: const Text('Xóa'),
+                ),
+              ],
             ),
           ],
         ],
@@ -406,14 +481,15 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   void _showAddFeedbackDialog() {
     int selectedRating = 5;
     final commentController = TextEditingController();
+    final messenger = ScaffoldMessenger.of(this.context);
 
     showModalBottomSheet(
-      context: context,
+      context: this.context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => StatefulBuilder(
+      builder: (bottomSheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
           return Padding(
             padding: EdgeInsets.only(
@@ -462,32 +538,132 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      Navigator.pop(context);
+                      Navigator.pop(bottomSheetContext);
+
                       final errorMsg = await ref
                           .read(feedbackControllerProvider.notifier)
                           .addFeedback(
-                            productId: widget.productId,
-                            rating: selectedRating,
-                            comment: commentController.text.trim().isEmpty
-                                ? null
-                                : commentController.text.trim(),
-                          );
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              errorMsg == null
-                                  ? 'Cảm ơn bạn đã đánh giá!'
-                                  : errorMsg,
-                            ),
-                            backgroundColor: errorMsg == null
-                                ? AppTheme.successColor
-                                : AppTheme.errorColor,
+                        productId: widget.productId,
+                        rating: selectedRating,
+                        comment: commentController.text.trim().isEmpty
+                            ? null
+                            : commentController.text.trim(),
+                      );
+
+                      if (!mounted) return;
+
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            errorMsg == null
+                                ? 'Cảm ơn bạn đã đánh giá!'
+                                : errorMsg,
                           ),
-                        );
-                      }
+                          backgroundColor: errorMsg == null
+                              ? AppTheme.successColor
+                              : AppTheme.errorColor,
+                        ),
+                      );
                     },
                     child: const Text('Gửi đánh giá'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showEditFeedbackDialog(app_feedback.Feedback feedback) {
+    int selectedRating = feedback.rating;
+    final commentController = TextEditingController(text: feedback.comment ?? '');
+    final messenger = ScaffoldMessenger.of(this.context);
+
+    showModalBottomSheet(
+      context: this.context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetContext) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              left: 16,
+              right: 16,
+              top: 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Chỉnh sửa đánh giá',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: RatingBar.builder(
+                    initialRating: selectedRating.toDouble(),
+                    minRating: 1,
+                    direction: Axis.horizontal,
+                    allowHalfRating: false,
+                    itemCount: 5,
+                    itemPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    itemBuilder: (context, _) => const Icon(
+                      Icons.star,
+                      color: Colors.amber,
+                    ),
+                    onRatingUpdate: (rating) {
+                      setModalState(() => selectedRating = rating.toInt());
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: commentController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nhận xét',
+                    hintText: 'Cập nhật trải nghiệm của bạn...',
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(bottomSheetContext);
+
+                      final errorMsg = await ref
+                          .read(feedbackControllerProvider.notifier)
+                          .updateFeedback(
+                        feedbackId: feedback.feedbackId,
+                        productId: widget.productId,
+                        rating: selectedRating,
+                        comment: commentController.text.trim().isEmpty
+                            ? null
+                            : commentController.text.trim(),
+                      );
+
+                      if (!mounted) return;
+
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            errorMsg ?? 'Cập nhật đánh giá thành công!',
+                          ),
+                          backgroundColor: errorMsg == null
+                              ? AppTheme.successColor
+                              : AppTheme.errorColor,
+                        ),
+                      );
+                    },
+                    child: const Text('Lưu thay đổi'),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -527,7 +703,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   IconButton(
                     icon: const Icon(Icons.remove),
                     onPressed:
-                        _quantity > 1 ? () => setState(() => _quantity--) : null,
+                    _quantity > 1 ? () => setState(() => _quantity--) : null,
                   ),
                   Text(
                     '$_quantity',
@@ -548,19 +724,20 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               child: ElevatedButton.icon(
                 onPressed: enabled
                     ? () {
-                        final product =
-                            ref.read(productControllerProvider).selectedProduct;
-                        if (product == null) return;
-                        ref
-                            .read(cartControllerProvider.notifier)
-                            .addToCart(product, quantity: _quantity);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Đã thêm $_quantity sản phẩm vào giỏ hàng'),
-                            backgroundColor: AppTheme.successColor,
-                          ),
-                        );
-                      }
+                  final product =
+                      ref.read(productControllerProvider).selectedProduct;
+                  if (product == null) return;
+                  ref
+                      .read(cartControllerProvider.notifier)
+                      .addToCart(product, quantity: _quantity);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content:
+                      Text('Đã thêm $_quantity sản phẩm vào giỏ hàng'),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
+                }
                     : null,
                 icon: const Icon(Icons.shopping_cart_outlined),
                 label: const Text('Thêm vào giỏ'),

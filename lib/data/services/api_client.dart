@@ -7,6 +7,7 @@ import '../../core/utils/shared_prefs.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
+
   factory ApiClient() => _instance;
 
   late final Dio _dio;
@@ -15,10 +16,12 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
-        connectTimeout:
-            const Duration(milliseconds: ApiConstants.connectTimeout),
-        receiveTimeout:
-            const Duration(milliseconds: ApiConstants.receiveTimeout),
+        connectTimeout: const Duration(
+          milliseconds: ApiConstants.connectTimeout,
+        ),
+        receiveTimeout: const Duration(
+          milliseconds: ApiConstants.receiveTimeout,
+        ),
         headers: const {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -72,21 +75,16 @@ class ApiClient {
       // #region agent log
       if (e is DioException) {
         final raw = e.response?.data?.toString() ?? '';
-        agentDebugLog(
-          'api_client.dart:get',
-          'dio_get_failed',
-          {
-            'path': path,
-            'requireAuth': requireAuth,
-            'skipAuth': opts.extra?['skipAuth'] == true,
-            'statusCode': e.response?.statusCode,
-            'method': e.requestOptions.method,
-            'fullUri': e.requestOptions.uri.toString(),
-            'dioType': e.type.name,
-            'bodySnippet': raw.length > 400 ? raw.substring(0, 400) : raw,
-          },
-          hypothesisId: 'H1',
-        );
+        agentDebugLog('api_client.dart:get', 'dio_get_failed', {
+          'path': path,
+          'requireAuth': requireAuth,
+          'skipAuth': opts.extra?['skipAuth'] == true,
+          'statusCode': e.response?.statusCode,
+          'method': e.requestOptions.method,
+          'fullUri': e.requestOptions.uri.toString(),
+          'dioType': e.type.name,
+          'bodySnippet': raw.length > 400 ? raw.substring(0, 400) : raw,
+        }, hypothesisId: 'H1');
       }
       // #endregion
       throw ApiException.fromDioError(e);
@@ -134,17 +132,27 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    bool requireAuth = true,
   }) async {
     try {
+      final requestOptions = options ?? Options();
+
+      if (requireAuth) {
+        final token = SharedPrefs.getToken();
+        if (token != null && token.isNotEmpty) {
+          requestOptions.headers ??= {};
+          requestOptions.headers!['Authorization'] = 'Bearer $token';
+        }
+      }
+
       return await _dio.delete(
         path,
         data: data,
         queryParameters: queryParameters,
-        options: options,
+        options: requestOptions,
       );
     } catch (e) {
       throw ApiException.fromDioError(e);
     }
   }
 }
-

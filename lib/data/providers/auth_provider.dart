@@ -199,11 +199,11 @@ class Auth extends _$Auth {
   }
 
   Future<void> _saveUserInfo(User user) async {
-    await SharedPrefs.saveUserId(user.accountId);
-    await SharedPrefs.saveUserName(user.username);
-    await SharedPrefs.saveUserEmail(user.email);
-    await SharedPrefs.saveUserFullName(user.fullName);
-    await SharedPrefs.saveUserAvatar(user.avatar);
+    await SharedPrefs.saveUserId(user.accountId ?? user.customerId ?? '');
+    await SharedPrefs.saveUserName(user.username ?? '');
+    await SharedPrefs.saveUserEmail(user.email ?? '');
+    await SharedPrefs.saveUserFullName(user.fullName ?? '');
+    await SharedPrefs.saveUserAvatar(user.avatar ?? '');
   }
 }
 

@@ -12,16 +12,15 @@ class AuthService {
   Future<LoginResponse> login(String email, String password) async {
     final response = await _apiClient.post(
       ApiConstants.login,
-      data: {
-        'email': email,
-        'password': password,
-      },
+      data: {'email': email, 'password': password},
     );
 
     final data = response.data;
     if (data is Map<String, dynamic> &&
         ((data['success'] ?? data['succeeded']) == true)) {
-      return LoginResponse.fromJson((data['data'] as Map).cast<String, dynamic>());
+      return LoginResponse.fromJson(
+        (data['data'] as Map).cast<String, dynamic>(),
+      );
     }
     if (data is Map<String, dynamic>) {
       throw Exception(data['message'] ?? 'Đăng nhập thất bại');
@@ -100,23 +99,21 @@ class AuthService {
       formData.fields.add(MapEntry('address', address));
     }
     if (dateOfBirth != null) {
-      formData.fields.add(MapEntry('dateOfBirth', dateOfBirth.toIso8601String()));
+      formData.fields.add(
+        MapEntry('dateOfBirth', dateOfBirth.toIso8601String()),
+      );
     }
     if (gender != null && gender.isNotEmpty) {
       formData.fields.add(MapEntry('gender', gender));
     }
 
     if (avatarPath != null && avatarPath.isNotEmpty) {
-      formData.files.add(MapEntry(
-        'avatar',
-        await MultipartFile.fromFile(avatarPath),
-      ));
+      formData.files.add(
+        MapEntry('avatar', await MultipartFile.fromFile(avatarPath)),
+      );
     }
 
-    final response = await _apiClient.put(
-      ApiConstants.profile,
-      data: formData,
-    );
+    final response = await _apiClient.put(ApiConstants.profile, data: formData);
 
     final data = response.data;
     if (data is Map<String, dynamic> &&
@@ -157,9 +154,7 @@ class AuthService {
   Future<void> forgotPassword(String email) async {
     final response = await _apiClient.post(
       ApiConstants.forgotPassword,
-      data: {
-        'email': email,
-      },
+      data: {'email': email},
     );
 
     final data = response.data;
@@ -179,10 +174,7 @@ class AuthService {
   }) async {
     final response = await _apiClient.post(
       ApiConstants.resetPassword,
-      data: {
-        'token': token,
-        'newPassword': newPassword,
-      },
+      data: {'token': token, 'newPassword': newPassword},
     );
 
     final data = response.data;
@@ -194,6 +186,34 @@ class AuthService {
       throw Exception(data['message'] ?? 'Đặt lại mật khẩu thất bại');
     }
     throw Exception('Đặt lại mật khẩu thất bại');
+  }
+
+  Future<User?> getUserByCustomerId(String customerId) async {
+    final response = await _apiClient.get(
+      '${ApiConstants.adminCustomers}/$customerId',
+      requireAuth: false,
+    );
+
+    final data = response.data;
+
+    if (data is Map<String, dynamic> &&
+        ((data['success'] ?? data['succeeded']) == true) &&
+        data['data'] is Map) {
+      return User.fromJson((data['data'] as Map).cast<String, dynamic>());
+    }
+
+    if (data is Map<String, dynamic>) {
+      if (data.containsKey('customerID') ||
+          data.containsKey('customerId') ||
+          data.containsKey('username') ||
+          data.containsKey('email')) {
+        return User.fromJson(data);
+      }
+
+      throw Exception(data['message'] ?? 'Không lấy được thông tin người dùng');
+    }
+
+    throw Exception('Không lấy được thông tin người dùng');
   }
 }
 
@@ -215,23 +235,29 @@ class LoginResponse {
         String payload = parts[1];
         // Pad base64 string
         switch (payload.length % 4) {
-          case 2: payload += '=='; break;
-          case 3: payload += '='; break;
+          case 2:
+            payload += '==';
+            break;
+          case 3:
+            payload += '=';
+            break;
         }
         final decoded = utf8.decode(base64Url.decode(payload));
         final Map<String, dynamic> claims = jsonDecode(decoded);
         // Thu tim cac claim pho bien chua userId
-        userId = (claims['CustomerID'] ?? claims['customerId'] ?? claims['customerID']
-            ?? claims['sub'] ?? claims['nameid'] ?? claims['UserId']
-            ?? claims['userId'] ?? claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'])
-            ?.toString();
+        userId =
+            (claims['CustomerID'] ??
+                    claims['customerId'] ??
+                    claims['customerID'] ??
+                    claims['sub'] ??
+                    claims['nameid'] ??
+                    claims['UserId'] ??
+                    claims['userId'] ??
+                    claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'])
+                ?.toString();
       }
     } catch (_) {}
 
-    return LoginResponse(
-      accessToken: token,
-      userId: userId,
-    );
+    return LoginResponse(accessToken: token, userId: userId);
   }
 }
-

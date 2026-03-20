@@ -39,7 +39,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
     final user = ref.read(authProvider).user;
     if (user != null) {
-      _fullNameController.text = user.fullName;
+      _fullNameController.text = user.fullName!;
       _phoneController.text = user.phone ?? '';
       _addressController.text = user.address ?? '';
       _selectedDate = user.dateOfBirth;

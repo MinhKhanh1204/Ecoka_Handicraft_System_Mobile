@@ -10,7 +10,7 @@ class Feedback {
   final String? status;
   final List<String> imageUrls;
 
-  Feedback({
+  const Feedback({
     required this.feedbackId,
     this.customerId,
     this.productId,
@@ -35,6 +35,32 @@ class Feedback {
     return n.clamp(1, 5);
   }
 
+  Feedback copyWith({
+    int? feedbackId,
+    String? customerId,
+    String? productId,
+    String? username,
+    int? rating,
+    String? comment,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? status,
+    List<String>? imageUrls,
+  }) {
+    return Feedback(
+      feedbackId: feedbackId ?? this.feedbackId,
+      customerId: customerId ?? this.customerId,
+      productId: productId ?? this.productId,
+      username: username ?? this.username,
+      rating: rating ?? this.rating,
+      comment: comment ?? this.comment,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      status: status ?? this.status,
+      imageUrls: imageUrls ?? this.imageUrls,
+    );
+  }
+
   factory Feedback.fromJson(Map<String, dynamic> json) {
     List<String> urls = [];
     final imgData = json['imageUrls'];
@@ -44,8 +70,10 @@ class Feedback {
 
     return Feedback(
       feedbackId: _parseInt(json['feedbackId'] ?? json['feedbackID'], 0),
-      customerId: json['customerId']?.toString(),
-      productId: json['productId']?.toString(),
+      customerId:
+      json['customerId']?.toString() ?? json['customerID']?.toString(),
+      productId:
+      json['productId']?.toString() ?? json['productID']?.toString(),
       username: json['username']?.toString(),
       rating: _parseRating(json['rating']),
       comment: json['comment']?.toString(),

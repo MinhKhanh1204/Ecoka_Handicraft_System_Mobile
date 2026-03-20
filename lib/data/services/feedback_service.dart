@@ -1,14 +1,15 @@
+import 'package:dio/dio.dart';
+
 import '../../core/constants/api_constants.dart';
 import '../../core/debug/agent_debug_log.dart';
+import '../../core/utils/shared_prefs.dart';
 import '../models/feedback.dart';
 import 'api_client.dart';
 
 class FeedbackService {
   final ApiClient _apiClient = ApiClient();
 
-  /// Lấy danh sách đánh giá theo sản phẩm (endpoint công khai, không cần đăng nhập).
   Future<List<Feedback>> getFeedbacksByProduct(String productId) async {
-    // #region agent log
     agentDebugLog(
       'feedback_service.dart:getFeedbacksByProduct',
       'before_get',
@@ -19,7 +20,7 @@ class FeedbackService {
       },
       hypothesisId: 'H2',
     );
-    // #endregion
+
     final response = await _apiClient.get(
       '${ApiConstants.feedbacks}/filter',
       queryParameters: {'productId': productId},
@@ -27,7 +28,7 @@ class FeedbackService {
     );
 
     final data = response.data;
-    // #region agent log
+
     agentDebugLog(
       'feedback_service.dart:getFeedbacksByProduct',
       'after_get',
@@ -38,7 +39,7 @@ class FeedbackService {
       },
       hypothesisId: 'H4',
     );
-    // #endregion
+
     if (data is List) {
       return data
           .map((json) => Feedback.fromJson((json as Map).cast<String, dynamic>()))
@@ -60,25 +61,87 @@ class FeedbackService {
     required int rating,
     String? comment,
   }) async {
-    // Gọi endpoint /feedbacks/create (JWT cung cấp CustomerID tự động)
+    final customerId = SharedPrefs.getUserId();
+
+    if (customerId == null || customerId.trim().isEmpty) {
+      throw Exception('Không tìm thấy CustomerID. Vui lòng đăng nhập lại.');
+    }
+
+    final formData = FormData.fromMap({
+      'ProductID': productId,
+      'CustomerID': customerId,
+      'Rating': rating,
+      if (comment != null && comment.trim().isNotEmpty)
+        'Comment': comment.trim(),
+    });
+
     final response = await _apiClient.post(
-      '${ApiConstants.feedbacks}/create',
-      data: {
-        'productId': productId,
-        'rating': rating,
-        'comment': comment,
-      },
+      '${ApiConstants.feedbacks}',
+      data: formData,
     );
 
-    // Backend trả về đối tượng feedback trực tiếp (CreatedAtAction result)
     final data = response.data;
+
     if (data is Map<String, dynamic>) {
+      if (data['data'] is Map<String, dynamic>) {
+        return Feedback.fromJson((data['data'] as Map).cast<String, dynamic>());
+      }
       return Feedback.fromJson(data);
     }
+
+    throw Exception('Phản hồi không hợp lệ từ server.');
+  }
+
+  Future<Feedback> updateFeedback({
+    required int feedbackId,
+    required int rating,
+    String? comment,
+  }) async {
+    final customerId = SharedPrefs.getUserId();
+
+    if (customerId == null || customerId.trim().isEmpty) {
+      throw Exception('Không tìm thấy CustomerID. Vui lòng đăng nhập lại.');
+    }
+
+    final formData = FormData.fromMap({
+      'CustomerID': customerId,
+      'Rating': rating,
+      if (comment != null && comment.trim().isNotEmpty)
+        'Comment': comment.trim(),
+    });
+
+    final response = await _apiClient.put(
+      '${ApiConstants.feedbacks}/$feedbackId',
+      data: formData,
+    );
+
+    final data = response.data;
+
+    if (data is Map<String, dynamic>) {
+      if (data['data'] is Map<String, dynamic>) {
+        return Feedback.fromJson((data['data'] as Map).cast<String, dynamic>());
+      }
+      return Feedback.fromJson(data);
+    }
+
     throw Exception('Phản hồi không hợp lệ từ server.');
   }
 
   Future<void> deleteFeedback(int feedbackId) async {
-    await _apiClient.delete('${ApiConstants.feedbacks}/$feedbackId');
+    final customerId = SharedPrefs.getUserId();
+
+    if (customerId == null || customerId.trim().isEmpty) {
+      throw Exception('Không tìm thấy CustomerID. Vui lòng đăng nhập lại.');
+    }
+
+    final formData = FormData.fromMap({
+      'CustomerID': customerId,
+      'Status': 'Deleted',
+    });
+
+    await _apiClient.put(
+      '${ApiConstants.feedbacks}/$feedbackId',
+      data: formData,
+    );
   }
 }

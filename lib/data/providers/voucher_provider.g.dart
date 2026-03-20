@@ -23,7 +23,7 @@ final voucherServiceProvider = AutoDisposeProvider<VoucherService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef VoucherServiceRef = AutoDisposeProviderRef<VoucherService>;
-String _$voucherControllerHash() => r'b75f6596bee1404914031416173ef5258d14c180';
+String _$voucherControllerHash() => r'3c9a43d58401b0cd29f2aeb4a7fa4805993e14c0';
 
 /// See also [VoucherController].
 @ProviderFor(VoucherController)
